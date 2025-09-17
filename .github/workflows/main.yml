@@ -1,0 +1,100 @@
+name: ci-dotnet-sonarqube
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+
+jobs:
+  sonarqube:
+    name: Build, Test & SonarQube
+    runs-on: ubuntu-latest
+
+    # Needed for PR metadata; PR decoration itself is handled by your SonarQube GitHub App/webhook setup
+    permissions:
+      contents: read
+      pull-requests: read
+
+    env:
+      # ---- REQUIRED: set these in your repo/org secrets ----
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}   # e.g. https://sonarqube.mycompany.com
+      SONAR_TOKEN:    ${{ secrets.SONAR_TOKEN }}       # user or project token from SonarQube
+      # ------------------------------------------------------
+      PROJECT_KEY: mycompany.myproject                  # change to your SonarQube project key
+      PROJECT_NAME: MyProject                           # change to your project name
+      SOLUTION_PATH: ./MyProject.sln                    # change if your solution path differs
+      # Coverage output pattern used below
+      OPENCOVER_REPORTS: '**/TestResults/**/coverage.opencover.xml'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # full history helps blame/PR analysis in SonarQube
+          fetch-depth: 0
+
+      - name: Set up Java (for Sonar scanner)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            7.0.x
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Install dotnet-sonarscanner
+        run: dotnet tool install --global dotnet-sonarscanner
+      - name: Add dotnet tools to PATH
+        run: echo "$HOME/.dotnet/tools" >> $GITHUB_PATH
+
+      - name: SonarQube - Begin analysis
+        run: |
+          # Base args
+          ARGS="/k:${PROJECT_KEY} /n:${PROJECT_NAME} \
+          /d:sonar.host.url=${SONAR_HOST_URL} \
+          /d:sonar.cs.opencover.reportsPaths=${OPENCOVER_REPORTS} \
+          /d:sonar.coverage.exclusions=**/*.cshtml,**/*Tests/*.cs,**/*Tests/** \
+          /d:sonar.scm.revision=${GITHUB_SHA}"
+
+          # PR context (optional but recommended for proper PR analysis on self-hosted SonarQube)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ARGS="$ARGS \
+            /d:sonar.pullrequest.key=${{ github.event.pull_request.number }} \
+            /d:sonar.pullrequest.branch=${{ github.head_ref }} \
+            /d:sonar.pullrequest.base=${{ github.base_ref }}"
+          else
+            # Branch analysis
+            ARGS="$ARGS /d:sonar.branch.name=${{ github.ref_name }}"
+          fi
+
+          dotnet-sonarscanner begin $ARGS /d:sonar.login=${SONAR_TOKEN}
+      
+      - name: Restore
+        run: dotnet restore "${SOLUTION_PATH}"
+
+      - name: Build (Release)
+        run: dotnet build "${SOLUTION_PATH}" --configuration Release --no-restore
+
+      - name: Test with coverage (OpenCover)
+        run: |
+          # Run tests across test projects; adjust glob if needed
+          dotnet test "${SOLUTION_PATH}" \
+            --configuration Release --no-build \
+            /p:CollectCoverage=true \
+            /p:CoverletOutputFormat=opencover \
+            /p:CoverletOutput=./TestResults/coverage
+
+      - name: SonarQube - End analysis
+        run: dotnet-sonarscanner end /d:sonar.login=${SONAR_TOKEN}
