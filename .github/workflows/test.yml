@@ -1,0 +1,95 @@
+name: ci-dotnet-sonarqube
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sonarqube:
+    name: Build, Test & SonarQube
+    runs-on: self-hosted   # 👈 tu runner en Windows
+
+    permissions:
+      contents: read
+      pull-requests: read
+
+    env:
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}   # ej. http://<IP_PUBLICA>:9000
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}         # token generado en SonarQube
+      PROJECT_KEY: mycompany.my-solution              # cambia según tu SonarQube
+      PROJECT_NAME: My Solution Sonar
+      SOLUTION_PATH: ./my-solution.sln
+      OPENCOVER_REPORTS: '**/TestResults/**/coverage.opencover.xml'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java (SonarQube necesita Java)
+        if: runner.os != 'Windows'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/packages.lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Install dotnet-sonarscanner
+        run: dotnet tool install --global dotnet-sonarscanner
+        shell: pwsh
+
+      - name: Add dotnet tools to PATH
+        run: echo "$env:USERPROFILE\.dotnet\tools" >> $env:GITHUB_PATH
+        shell: pwsh
+
+      - name: SonarQube - Begin analysis
+        run: |
+          $args = "/k:$env:PROJECT_KEY /n:$env:PROJECT_NAME " +
+                  "/d:sonar.host.url=$env:SONAR_HOST_URL " +
+                  "/d:sonar.cs.opencover.reportsPaths=$env:OPENCOVER_REPORTS " +
+                  "/d:sonar.coverage.exclusions=**/*.cshtml,**/*Tests/*.cs,**/*Tests/** " +
+                  "/d:sonar.scm.revision=${{ github.sha }}"
+
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $args += " /d:sonar.pullrequest.key=${{ github.event.pull_request.number }} " +
+                     "/d:sonar.pullrequest.branch=${{ github.head_ref }} " +
+                     "/d:sonar.pullrequest.base=${{ github.base_ref }}"
+          } else {
+            $args += " /d:sonar.branch.name=${{ github.ref_name }}"
+          }
+
+          dotnet-sonarscanner begin $args /d:sonar.login=$env:SONAR_TOKEN
+        shell: pwsh
+
+      - name: Restore
+        run: dotnet restore "${{ env.SOLUTION_PATH }}"
+        shell: pwsh
+
+      - name: Build (Release)
+        run: dotnet build "${{ env.SOLUTION_PATH }}" --configuration Release --no-restore
+        shell: pwsh
+
+      - name: Test with coverage (OpenCover)
+        run: |
+          dotnet test "${{ env.SOLUTION_PATH }}" `
+            --configuration Release --no-build `
+            /p:CollectCoverage=true `
+            /p:CoverletOutputFormat=opencover `
+            /p:CoverletOutput=./TestResults/coverage
+        shell: pwsh
+
+      - name: SonarQube - End analysis
+        run: dotnet-sonarscanner end /d:sonar.login=$env:SONAR_TOKEN
+        shell: pwsh

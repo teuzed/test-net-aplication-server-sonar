@@ -1,0 +1,12 @@
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/bin/Debug/net8.0/my-library-sonar.deps.json
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/bin/Debug/net8.0/my-library-sonar.dll
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/bin/Debug/net8.0/my-library-sonar.pdb
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.AssemblyInfoInputs.cache
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.AssemblyInfo.cs
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.csproj.CoreCompileInputs.cache
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.sourcelink.json
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.dll
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/refint/my-library-sonar.dll
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/my-library-sonar.pdb
+/workspaces/test-net-aplication-server-sonar/my-library-sonar/obj/Debug/net8.0/ref/my-library-sonar.dll
