@@ -37,7 +37,6 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 8.0.x
-          install-dir: C:\runners\dotnet
 
       - name: Cache NuGet
         uses: actions/cache@v4
