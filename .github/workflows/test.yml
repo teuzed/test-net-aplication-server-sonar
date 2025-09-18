@@ -1,4 +1,4 @@
-name: ci-dotnet-sonarqube
+name: Test
 
 on:
   workflow_dispatch:
