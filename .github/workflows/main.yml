@@ -55,9 +55,11 @@ jobs:
         shell: pwsh
         run: |
           .\.sonar\scanner\dotnet-sonarscanner begin `
-            /k:"mycompany.my-solution" `
+            /k:"mycompany.myproject" `
+            /n:"MyProject" `
             /d:sonar.host.url="${{ secrets.SONAR_HOST_URL }}" `
-            /d:sonar.token="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.login="${{ secrets.SONAR_TOKEN }}" `
+            /d:sonar.projectBaseDir="${{ github.workspace }}" `
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
 
       - name: Restore dependencies
