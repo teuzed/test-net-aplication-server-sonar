@@ -3,10 +3,13 @@ name: Main
 on:
   workflow_dispatch:
 
+env:
+  APP_NAME: 'my-solution.sln'
+
 jobs:
   build:
     name: Build, Test & Analyze
-    runs-on: self-hosted   # 👈 tu runner Windows en GCP
+    runs-on: self-hosted 
 
     steps:
       - uses: actions/checkout@v4
@@ -63,16 +66,16 @@ jobs:
             /d:sonar.cs.opencover.reportsPaths="**/TestResults/**/coverage.opencover.xml"
 
       - name: Restore dependencies
-        run: dotnet restore my-solution.sln
+        run: dotnet restore ${{ env.APP_NAME  }}
         shell: pwsh
 
       - name: Build solution
-        run: dotnet build my-solution.sln --no-restore --configuration Release
+        run: dotnet build ${{ env.APP_NAME  }} --no-restore --configuration Release
         shell: pwsh
 
       - name: Run tests with coverage
         run: |
-          dotnet test my-solution.sln `
+          dotnet test ${{ env.APP_NAME  }} `
             --no-build --configuration Release `
             /p:CollectCoverage=true `
             /p:CoverletOutputFormat=opencover `
